@@ -11,7 +11,11 @@ A simple text-based chatbot built with Python's NLTK library for the CodeAlpha i
 - **Conversational Flow**: Handles greetings, goodbyes, and common queries
 - **Customizable Responses**: Easy to extend with new dialogue patterns
 - **Error Handling**: Graceful exit on keyboard interrupts
-
+- **🌤 Weather Updates**: Ask “what’s the weather in [city]?” to get real-time weather info using the OpenWeatherMap API.
+- **🕒 Current Time**: Type “what’s the time?” to get the current local time.
+- **😂 Jokes** : Ask for a joke with “tell me a joke” and enjoy a laugh.
+- **🤓 Fun Facts** : Learn something new with “give me a fun fact”.
+- **⏳ Auto Timeout** : Chat session automatically ends after 60 seconds of inactivity.
 ## Installation
 
 1. Clone the repository:

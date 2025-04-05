@@ -1,15 +1,49 @@
-import nltk
+=import nltk
 import random
 import time
 import threading
+import requests
+import json
+import re
 from nltk.chat.util import Chat, reflections
-from datetime import datetime, timedelta
+from datetime import datetime
+from config import OPENWEATHER_API_KEY
 
 nltk.download('punkt')
 
 SESSION_TIMEOUT = 60
 last_activity = time.time()
 shutdown_flag = threading.Event()
+
+def get_weather(city):
+    """Get weather data from OpenWeatherMap API"""
+    base_url = "http://api.openweathermap.org/data/2.5/weather"
+    params = {
+        'q': city,
+        'appid': OPENWEATHER_API_KEY,
+        'units': 'metric'
+    }
+
+    try:
+        response = requests.get(base_url, params=params)
+        data = response.json()
+
+        if response.status_code == 200:
+            return {
+                'city': data.get('name', city),
+                'temp': data['main'].get('temp', '?'),
+                'description': data['weather'][0].get('description', '?'),
+                'humidity': data['main'].get('humidity', '?')
+            }
+        else:
+            return {'error': data.get('message', 'Unknown error')}
+
+    except requests.exceptions.RequestException as e:
+        return {'error': f"Connection error: {str(e)}"}
+    except json.JSONDecodeError:
+        return {'error': "Invalid API response"}
+    except KeyError:
+        return {'error': "Unexpected data format"}
 
 pairs = [
     [
@@ -46,10 +80,7 @@ pairs = [
     ],
     [
         r"what('s| is) the time\??",
-        [
-            lambda _: f"The current time is {datetime.now().strftime('%H:%M')}",
-            f"Right now it's {datetime.now().strftime('%I:%M %p')}"
-        ]
+        lambda _: f"The current time is {datetime.now().strftime('%I:%M %p')}"
     ],
     [
         r"I am (hungry|sleepy|tired|bored)",
@@ -58,14 +89,26 @@ pairs = [
          "%1? Maybe you should grab a snack or take a nap!"]
     ],
     [
+        r"tell me a joke",
+        ["Why don't scientists trust atoms? Because they make up everything!",
+         "What do you get when you cross a snowman and a dog? Frostbite!",
+         "Why did the computer go to therapy? Too many bytes of trauma!"]
+    ],
+    [
+        r"give me a fun fact",
+        ["Did you know? Honey never spoils.",
+         "Octopuses have three hearts!",
+         "Bananas are berries, but strawberries aren't."]
+    ],
+    [
         r"quit|bye|goodbye",
         ["Goodbye!", "It was nice talking to you!", "See you later!"]
     ],
     [
         r"help|what can you do",
-        ["I can chat about various topics, tell time, and discuss CodeAlpha!",
-         "Try asking me about myself, the time, or how I'm doing.",
-         "I'm here to have conversations. Ask me anything!"]
+        ["I can chat, tell you the time, share jokes or facts, and check the weather!",
+         "Ask me about CodeAlpha, the weather, or just say hi!",
+         "Try saying 'tell me a joke' or 'what's the weather in London?'"]
     ],
     [
         r"(.*)",
@@ -73,9 +116,7 @@ pairs = [
     ]
 ]
 
-
 def timeout_checker():
-
     global last_activity
     while not shutdown_flag.is_set():
         if time.time() - last_activity > SESSION_TIMEOUT:
@@ -84,16 +125,15 @@ def timeout_checker():
             break
         time.sleep(1)
 
-
 def chatbot():
     global last_activity
-
 
     timeout_thread = threading.Thread(target=timeout_checker)
     timeout_thread.daemon = True
     timeout_thread.start()
 
-    print(f"ChatBot: Hi! I'm Your ChatBot. (Timeout: {SESSION_TIMEOUT // 60} mins)")
+    timeout_msg = f"{SESSION_TIMEOUT // 60} minutes" if SESSION_TIMEOUT >= 60 else f"{SESSION_TIMEOUT} seconds"
+    print(f"ChatBot: Hi! I'm Your ChatBot. (Timeout: {timeout_msg})")
     print("Type 'quit' to exit or wait for timeout\n")
 
     chat = Chat(pairs, reflections)
@@ -101,18 +141,29 @@ def chatbot():
     try:
         while not shutdown_flag.is_set():
             try:
-                user_input = input("You: ").strip()
-                last_activity = time.time()  # Update activity timestamp
+                user_input = input("You: ").strip().lower()
+                last_activity = time.time()
 
                 if not user_input:
                     continue
 
-                if user_input.lower() in ['quit', 'exit', 'bye']:
+                if user_input in ['quit', 'exit', 'bye']:
                     print("ChatBot: Goodbye!")
                     shutdown_flag.set()
                     break
 
-                response = chat.respond(user_input)
+                weather_match = re.match(r"(what's|what is) the weather in (.+)", user_input)
+                if weather_match:
+                    city = weather_match.group(2).strip().title()
+                    weather = get_weather(city)
+                    if 'error' in weather:
+                        response = f"Sorry, couldn't fetch weather: {weather['error']}"
+                    else:
+                        response = (f"Weather in {weather['city']}: {weather['temp']}°C, "
+                                    f"{weather['description']}, humidity {weather['humidity']}%")
+                else:
+                    response = chat.respond(user_input)
+
                 print(f"ChatBot: {response}")
 
             except EOFError:
@@ -126,7 +177,6 @@ def chatbot():
         shutdown_flag.set()
         if timeout_thread.is_alive():
             timeout_thread.join()
-
 
 if __name__ == "__main__":
     chatbot()
