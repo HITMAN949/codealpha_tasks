@@ -1,9 +1,15 @@
 import nltk
 import random
+import time
+import threading
 from nltk.chat.util import Chat, reflections
-from datetime import datetime
+from datetime import datetime, timedelta
 
 nltk.download('punkt')
+
+SESSION_TIMEOUT = 60
+last_activity = time.time()
+shutdown_flag = threading.Event()
 
 pairs = [
     [
@@ -34,8 +40,8 @@ pairs = [
     ],
     [
         r"thank(s| you)",
-        ["You're welcome!", 
-         "Happy to help!", 
+        ["You're welcome!",
+         "Happy to help!",
          "Anytime!"]
     ],
     [
@@ -45,7 +51,7 @@ pairs = [
             f"Right now it's {datetime.now().strftime('%I:%M %p')}"
         ]
     ],
-   [
+    [
         r"I am (hungry|sleepy|tired|bored)",
         ["When humans feel %1, they should probably take a break!",
          "I don't experience %1, but I hear resting helps humans.",
@@ -67,10 +73,60 @@ pairs = [
     ]
 ]
 
+
+def timeout_checker():
+
+    global last_activity
+    while not shutdown_flag.is_set():
+        if time.time() - last_activity > SESSION_TIMEOUT:
+            print("\nChatBot: Session timed out due to inactivity. Goodbye!")
+            shutdown_flag.set()
+            break
+        time.sleep(1)
+
+
 def chatbot():
-    print("Chatbot: Hi! I'm Your ChatBot. Type 'quit' to exit.")
+    global last_activity
+
+
+    timeout_thread = threading.Thread(target=timeout_checker)
+    timeout_thread.daemon = True
+    timeout_thread.start()
+
+    print(f"ChatBot: Hi! I'm Your ChatBot. (Timeout: {SESSION_TIMEOUT // 60} mins)")
+    print("Type 'quit' to exit or wait for timeout\n")
+
     chat = Chat(pairs, reflections)
-    chat.converse()
+
+    try:
+        while not shutdown_flag.is_set():
+            try:
+                user_input = input("You: ").strip()
+                last_activity = time.time()  # Update activity timestamp
+
+                if not user_input:
+                    continue
+
+                if user_input.lower() in ['quit', 'exit', 'bye']:
+                    print("ChatBot: Goodbye!")
+                    shutdown_flag.set()
+                    break
+
+                response = chat.respond(user_input)
+                print(f"ChatBot: {response}")
+
+            except EOFError:
+                print("\nChatBot: Session ended.")
+                shutdown_flag.set()
+                break
+
+    except KeyboardInterrupt:
+        print("\nChatBot: Session interrupted. Goodbye!")
+    finally:
+        shutdown_flag.set()
+        if timeout_thread.is_alive():
+            timeout_thread.join()
+
 
 if __name__ == "__main__":
     chatbot()
