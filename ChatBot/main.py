@@ -1,4 +1,4 @@
-=import nltk
+import nltk
 import random
 import time
 import threading
