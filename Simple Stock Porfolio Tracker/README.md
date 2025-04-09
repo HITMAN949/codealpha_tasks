@@ -45,14 +45,13 @@ This project was developed during my internship at **Code Alpha** under the Pyth
 git clone https://github.com/yourusername/stock-portfolio-tracker.git
 cd simple-stock-portfolio-tracker
 
-## 2. Install dependencies:
-```bash
-pip install -r requirements.txt
+ 2. Install dependencies:
 
-## 3. Create a .env file and add your Alpha Vantage API key:
+pip install -r requirements.txt
+ 3. Create a .env file and add your Alpha Vantage API key:
 
 ALPHA_VANTAGE_API_KEY=your_api_key_here
 
-##4. Run the app:
-```bash
+4. Run the app:
+
 python tracker.py
