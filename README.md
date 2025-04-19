@@ -34,7 +34,7 @@ This project is a part of the **Code Alpha Python Programming Internship**.
 
 ### Prerequisites
 
-1. Python 3.x  
+1. Python 3.9  
 2. Install required Python packages using `pip`:
 
 ```bash
