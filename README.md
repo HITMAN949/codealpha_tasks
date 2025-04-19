@@ -1,4 +1,4 @@
-# CodeAlpha Tasks Repository
+# CodeAlpha Python Programming Tasks Repository
 
 Welcome to the CodeAlpha Python Programming Internship Tasks repository. This collection of projects showcases a variety of Python applications that were developed as part of the CodeAlpha internship program.
 
